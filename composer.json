@@ -1,0 +1,7 @@
+{
+    "require": {
+        "google/apiclient": "~2.0",
+        "spatie/async": "^1.5",
+        "guzzlehttp/guzzle": "^7.5"
+    }
+}

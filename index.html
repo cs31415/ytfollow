@@ -1,0 +1,180 @@
+
+<!doctype html>
+<html>
+  <head>
+    <title>Youtube Artist Follow</title>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <style type="text/css">
+      #login, #loggedin {
+        display: none;
+      }
+      .text-overflow {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 500px;
+      }
+    </style>
+    <style>
+      .loading {
+        padding: 10px;
+        color: red;
+      }
+
+      .loading:after {
+        overflow: hidden;
+        display: inline-block;
+        vertical-align: bottom;
+        -webkit-animation: ellipsis steps(4,end) 1000ms infinite;      
+        animation: ellipsis steps(4,end) 1000ms infinite;
+        content: "\2026"; /* ascii code for the ellipsis character */
+        width: 0px;
+      }
+
+      @keyframes ellipsis {
+        to {
+          width: 1.25em;    
+        }
+      }
+
+      @-webkit-keyframes ellipsis {
+        to {
+          width: 1.25em;    
+        }
+      }
+      </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="login">
+        <h1>Youtube Artist Follow</h1>
+        <button id="login-button" class="btn btn-primary">Log in with Youtube</button>
+      </div>
+      <div id="error">
+        <span id="errorMsg" style="color:red"></span>
+      </div>
+      <div id="logout" style="display:none">
+        <button id="logout-button" class="btn btn-primary">Log out from Youtube</button>
+      </div>
+      <div id="loggedin">
+        <div id="user-profile">
+        </div>
+        <div id="follow">
+          <h1>Follow all artists: </h1>
+          <button id="follow-button" class="btn btn-primary">Follow All</button>
+          <div id="artists-followed"></div>
+        </div>    
+      </div>
+    </div>
+   
+    <div id="loader" class="loading" style="display:none">Adding subscriptions. This could take a while</div>
+
+    <script id="artists-followed-template" type="text/x-handlebars-template">
+      <h1>You are now following the following artists:</h1>
+      <div class="media">
+        <div class="media-body">
+          <dl class="dl-horizontal">
+            {{#each this}}  
+              <dt>
+                <dd class="clearfix">
+                  <a href="https://www.youtube.com/channel/{{this.id}}" target="_blank" rel="noopener noreferrer">
+                    <img src="{{this.thumbnails.medium.url}}" width="100"/>  {{this.title}}</a>
+                  </dd>
+              {{#if this.hasError}}
+                <dd class="clearfix">{{this.error}}</dd>
+              {{/if}}
+              </dt><br>
+            {{/each}}
+          </dl>
+        </div>
+        
+      </div>
+    </script>
+
+    <script id="user-profile-template" type="text/x-handlebars-template">
+      <h1>Logged in as {{display_name}}</h1>
+    </script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script>
+      (function() {
+        var userProfileSource = document.getElementById('user-profile-template').innerHTML,
+            userProfileTemplate = Handlebars.compile(userProfileSource),
+            userProfilePlaceholder = document.getElementById('user-profile');
+
+        var artistsFollowedSource = document.getElementById('artists-followed-template').innerHTML,
+            artistsFollowedTemplate = Handlebars.compile(artistsFollowedSource),
+            artistsFollowedPlaceholder = document.getElementById('artists-followed');
+
+        const qs = new URLSearchParams(window.location.search)
+
+        var t = Cookies.get("t"),
+            error = qs.get("error"),
+            display_name = Cookies.get("display_name");
+       
+        if (error) {
+          if (error === "profile_error") {
+            $('#errorMsg').text('There was an error getting the user profile');
+          }
+          else {
+            $('#errorMsg').text('There was an error during the authentication');
+          }
+        } else {
+          if (t) {
+            if (display_name) {
+              userProfilePlaceholder.innerHTML = userProfileTemplate({ display_name });
+              $('#login').hide();
+              $('#loggedin').show();
+              $('#logout').show(); 
+            }
+            else {
+              $('#login').show();
+              $('#loggedin').hide();
+              $('#logout').hide();
+            }
+          } else {
+              $('#login').show();
+              $('#loggedin').hide();
+              $('#logout').hide();
+          }
+
+          document.getElementById('login-button').addEventListener('click', function() {
+            window.location = '/ytfollow/login.php';   
+          }, false);
+
+          document.getElementById('logout-button').addEventListener('click', function() {
+            Cookies.remove("t", { path: '' });
+            Cookies.remove("error", { path: '' });
+            window.location = "/ytfollow/logout.php";
+          }, false);
+
+          document.getElementById('follow-button').addEventListener('click', function() {
+            var url = `/ytfollow/follow.php`;
+            $('#loader').show();
+            $.ajax({type: 'GET', url: url})
+            .done(function(response) {
+              artistsFollowedPlaceholder.innerHTML = artistsFollowedTemplate(response);
+              $('#loader').hide();
+            })
+            .fail(function(msg) {
+              $('#errorMsg').text(JSON.stringify(msg)); 
+              $('#loader').hide();
+            });
+          }, false);
+
+          // This is to reload index page on back button post-logout in Safari/Firefox
+          window.addEventListener("pageshow", function(evt){
+            if(evt.persisted){
+              setTimeout(function(){
+                  window.location.reload();
+              },5);
+            }
+          }, false);
+        }
+      })();
+    </script>
+</html>
