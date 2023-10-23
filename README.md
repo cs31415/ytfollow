@@ -3,7 +3,7 @@ Bulk subscribe to Youtube channels
 
 ### Dependencies
 
-PHP
+PHP 8.2
 
 ### Installation
 
